@@ -1,0 +1,84 @@
+/* Design tokens taken from the Figma variables used across the "mc v2" screens. */
+:root {
+  /* Base */
+  --base-background: #ffffff;
+  --base-foreground: #25262c;
+  --base-foreground-light: #5b5f6e;
+  --base-muted-foreground: #8f94a1;
+  --base-border: #d8dadf;
+  --base-input: #ffffff;
+  --base-muted: #eeeef0;
+
+  /* Brand */
+  --brand-primary: #3e62b6;
+  --brand-primary-foreground: #ffffff;
+  --brand-primary-subtle: #f0f3fa;
+  --brand-primary-active: #c2ceea;
+  --brand-secondary: #eeeef0;
+  --brand-secondary-subtle: #f7f8f8;
+  --brand-secondary-foreground: #b6b9c3;
+
+  /* Sidebar */
+  --sidebar-background: #1b1f4f;
+  --sidebar-foreground: #ffffff;
+  --sidebar-foreground-light: #b6b9c3;
+  --sidebar-active: #5274c0;
+  --sidebar-input: rgba(255, 255, 255, 0.05);
+  --sidebar-border: rgba(255, 255, 255, 0.5);
+  --sidebar-muted-foreground: rgba(255, 255, 255, 0.5);
+
+  /* Status */
+  --status-destructive: #dc2626;
+  --status-destructive-foreground: #ffffff;
+  --status-success: #15803d;
+  --status-success-subtle: #f0fdf4;
+
+  /* Overlays */
+  --overlay: rgba(26, 26, 26, 0.4);
+  --on-image-badge: rgba(0, 0, 0, 0.5);
+
+  /* Spacing */
+  --spacing-0-5: 2px;
+  --spacing-1: 4px;
+  --spacing-1-5: 6px;
+  --spacing-2: 8px;
+  --spacing-2-5: 10px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+  --spacing-10: 40px;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-base: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+
+  /* Typography */
+  --font-sans: 'Poppins', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-size-h5: 28px;
+  --font-size-h6: 22px;
+  --font-size-body1: 16px;
+  --font-size-body2: 14px;
+  --font-size-caption: 12px;
+  --line-height-2xl: 40px;
+  --line-height-xl: 32px;
+  --line-height-base: 24px;
+  --line-height-sm: 20px;
+  --line-height-xs: 18px;
+
+  /* Effects */
+  --shadow-xs: 0 1px 2px rgba(27, 31, 79, 0.05);
+  --shadow-sm: 0 2px 8px rgba(27, 31, 79, 0.1);
+  --shadow-md: 0 4px 16px rgba(27, 31, 79, 0.12);
+  --shadow-menu: 0 2px 4px rgba(0, 0, 0, 0.06), 0 4px 8px rgba(27, 31, 79, 0.12);
+  --focus-ring: 0 0 0 3px rgba(62, 98, 182, 0.25);
+
+  /* Layout */
+  --sidebar-width: 280px;
+  --page-gutter: var(--spacing-10);
+}
