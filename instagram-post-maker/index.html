@@ -136,6 +136,13 @@
   .sheet .actions > * { flex:1; }
   .btn.ghost { background:var(--glass-strong); color:var(--ink); box-shadow:inset 0 1px 0 var(--edge); }
   .toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); z-index:40; border-radius:999px; padding:10px 12px 10px 18px; display:flex; gap:12px; align-items:center; font-weight:500; font-size:.92rem; white-space:nowrap; }
+
+  .handles { display:flex; flex-direction:column; gap:8px; }
+  .hrow { display:flex; gap:8px; align-items:center; }
+  .hrow select { flex:0 0 132px; padding:12px 10px; }
+  .hrow input { flex:1; min-width:0; }
+  .hrow .rm { flex:none; width:36px; height:36px; border-radius:50%; border:1px solid var(--edge-dim); background:var(--glass-strong); color:var(--ink2); font-size:1.2rem; line-height:1; cursor:pointer; }
+  .hint { margin:8px 0 0; color:var(--ink2); font-size:.8rem; }
 </style>
 </head>
 <body>
@@ -250,19 +257,9 @@
       <div class="sec">
         <div class="switch"><span>Signature at the bottom</span><input type="checkbox" data-k="sigOn"></div>
         <div data-show="sigOn">
-          <input type="text" data-k="sig" placeholder="@yourhandle">
-          <div style="margin-top:12px"><span class="lbl">Platform icon</span>
-            <select data-k="platform">
-              <option value="instagram">Instagram</option>
-              <option value="x">X (Twitter)</option>
-              <option value="tiktok">TikTok</option>
-              <option value="facebook">Facebook</option>
-              <option value="linkedin">LinkedIn</option>
-              <option value="youtube">YouTube</option>
-              <option value="threads">Threads</option>
-              <option value="none">No icon</option>
-            </select>
-          </div>
+          <div id="handleList" class="handles"></div>
+          <button class="link" id="addHandle" style="margin-top:10px">+ Add another handle</button>
+          <p class="hint">Same handle on several apps? Type it on each row and the icons sit side by side.</p>
           <div class="switch" style="margin-top:12px"><span>Show my photo too</span><input type="checkbox" data-k="sigPhoto"></div>
           <div data-show="sigPhoto" class="file" style="margin-top:12px"><label class="pickbtn" for="avFile2">Choose photo</label><input type="file" id="avFile2" accept="image/*"><small id="avName2">None</small></div>
           <div style="margin-top:12px"><span class="lbl">Position</span>
@@ -302,11 +299,11 @@ const TEMPLATES = {
     bg:'plain', c1:'#fdf7ea', font:'garamond', align:'center', valign:'middle', size:60,
     profileOn:false, sigOn:true, sigPos:'center', boldFirst:false, ratio:'1080x1350', tc:'auto',
     text:"I was in awe of her throughout her shoot.\n\nI mean! I had seen videos and pictures of her before, and I remember wondering if someone was always behind the camera telling her what to say, how to pose, how to act",
-    sig:'@yourhandle', platform:'instagram', sigPhoto:false,
+    sigPhoto:false,
   },
   profile: {
     bg:'plain', c1:'#ffffff', font:'inter', align:'left', valign:'top', size:48,
-    profileOn:true, sigOn:false, sigPos:'left', boldFirst:true, ratio:'1080x1350', tc:'#111111', platform:'instagram', sigPhoto:false,
+    profileOn:true, sigOn:false, sigPos:'left', boldFirst:true, ratio:'1080x1350', tc:'#111111', sigPhoto:false,
     text:"There's a thin line between parental love and pressure:\nWe could see her subtly pressuring her daughter into getting married.\n\nAnd this tells us something: our mothers can genuinely want the best for us, but the means through which they pursue what they believe is best for us might be hurting.\n\nThey can guide, advise, share their own experiences but they should never be the ones to pick our life partners.",
     pname:'Your Name', phandle:'@yourhandle',
   },
@@ -315,7 +312,8 @@ const TEMPLATES = {
 const s = {
   tpl:'quote', bg:'plain', c1:'#fdf7ea', c2:'#ffffff', angle:135, dim:30,
   font:'garamond', size:60, tc:'auto', align:'center', valign:'middle', boldFirst:false,
-  ratio:'1080x1350', text:'', sigOn:true, sig:'', sigPos:'center', platform:'instagram', sigPhoto:false,
+  ratio:'1080x1350', text:'', sigOn:true, sigPos:'center', sigPhoto:false,
+  handles:[{ platform:'instagram', text:'@yourhandle' }],
   profileOn:false, pname:'Your Name', phandle:'@yourhandle',
 };
 const imgs = { bg:null, deco:null, av:null };
@@ -401,6 +399,62 @@ function drawBadge(p, x, y, z) {
   ctx.restore();
 }
 
+// Signature block: handles grouped by text (one handle, many icons), packed into rows.
+const SIG = { z:56, gap:14, iconGap:8, itemGap:40, rowGap:16, font:40 };
+function sigLayout(w, pad) {
+  if (!s.sigOn) return null;
+  const items = [];
+  for (const hd of s.handles) {
+    const text = hd.text.trim(); if (!text) continue;
+    let it = items.find(i => i.text === text);
+    if (!it) items.push(it = { text, icons:[] });
+    if (hd.platform !== 'none' && !it.icons.includes(hd.platform)) it.icons.push(hd.platform);
+  }
+  if (!items.length) return null;
+  ctx.font = `500 ${SIG.font}px ${FONTS[s.font]}`;
+  for (const it of items) {
+    const n = it.icons.length;
+    it.w = (n ? n*SIG.z + (n-1)*SIG.iconGap + SIG.gap : 0) + ctx.measureText(it.text).width;
+  }
+  const photo = s.sigPhoto && imgs.av ? SIG.z + SIG.gap : 0;
+  const maxW = w - pad*2 - photo;
+  const rows = [];
+  for (const it of items) {
+    const r = rows[rows.length - 1];
+    if (r && r.w + SIG.itemGap + it.w <= maxW) { r.items.push(it); r.w += SIG.itemGap + it.w; }
+    else rows.push({ items:[it], w:it.w });
+  }
+  const height = rows.length*SIG.z + (rows.length-1)*SIG.rowGap;
+  return { rows, photo, height, width: photo + Math.max(...rows.map(r => r.w)) };
+}
+
+function drawSignature(L, w, h, pad, col) {
+  const { z } = SIG;
+  const top = h - pad - L.height + 4;
+  let bx = s.sigPos === 'left' ? pad : s.sigPos === 'right' ? w - pad - L.width : (w - L.width)/2;
+  if (L.photo) {
+    const cy = top + L.height/2;
+    ctx.save(); ctx.beginPath(); ctx.arc(bx + z/2, cy, z/2, 0, 7); ctx.clip();
+    cover(imgs.av, bx, cy - z/2, z, z); ctx.restore();
+    ctx.strokeStyle = col; ctx.globalAlpha = .35; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(bx + z/2, cy, z/2, 0, 7); ctx.stroke(); ctx.globalAlpha = 1;
+    bx += L.photo;
+  }
+  const inner = L.width - L.photo;
+  L.rows.forEach((r, ri) => {
+    const y = top + ri*(z + SIG.rowGap);
+    let x = s.sigPos === 'left' ? bx : s.sigPos === 'right' ? bx + inner - r.w : bx + (inner - r.w)/2;
+    for (const it of r.items) {
+      it.icons.forEach(p => { drawBadge(p, x, y, z); x += z + SIG.iconGap; });
+      if (it.icons.length) x += SIG.gap - SIG.iconGap;
+      ctx.fillStyle = col; ctx.font = `500 ${SIG.font}px ${FONTS[s.font]}`;
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      ctx.fillText(it.text, x, y + z/2 + 2);
+      x += ctx.measureText(it.text).width + SIG.itemGap;
+    }
+  });
+}
+
 function draw() {
   const [w, h] = s.ratio.split('x').map(Number);
   cv.width = w; cv.height = h;
@@ -452,7 +506,8 @@ function draw() {
   }
 
   // body text (auto-shrinks to fit)
-  const bottom = s.sigOn && s.sig.trim() ? h - pad - 70 : h - pad;
+  const sig = sigLayout(w, pad);
+  const bottom = sig ? h - pad - sig.height - 24 : h - pad;
   let S = s.size, lines;
   for (;;) {
     lines = layout(S, w - pad*2);
@@ -469,26 +524,7 @@ function draw() {
     ctx.fillText(l.t, x, startY + i*lh + lh/2);
   });
 
-  // signature: [photo] [platform badge] handle
-  if (s.sigOn && s.sig.trim()) {
-    const z = 56, gap = 16, txt = s.sig.trim();
-    ctx.font = `500 40px ${FONTS[s.font]}`;
-    const showPhoto = s.sigPhoto && imgs.av, showBadge = s.platform !== 'none';
-    const gw = (showPhoto ? z + gap : 0) + (showBadge ? z + gap : 0) + ctx.measureText(txt).width;
-    let gx = s.sigPos === 'left' ? pad : s.sigPos === 'right' ? w - pad - gw : (w - gw)/2;
-    const gy = h - pad - z + 4;
-    if (showPhoto) {
-      ctx.save(); ctx.beginPath(); ctx.arc(gx + z/2, gy + z/2, z/2, 0, 7); ctx.clip();
-      cover(imgs.av, gx, gy, z, z); ctx.restore();
-      ctx.strokeStyle = col; ctx.globalAlpha = .35; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(gx + z/2, gy + z/2, z/2, 0, 7); ctx.stroke(); ctx.globalAlpha = 1;
-      gx += z + gap;
-    }
-    if (showBadge) { drawBadge(s.platform, gx, gy, z); gx += z + gap; }
-    ctx.fillStyle = col; ctx.font = `500 40px ${FONTS[s.font]}`;
-    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.fillText(txt, gx, gy + z/2 + 2);
-  }
+  if (sig) drawSignature(sig, w, h, pad, col);
 }
 
 /* ---------- UI wiring ---------- */
@@ -574,6 +610,34 @@ loadFile('#decoFile', 'deco', '#decoName');
 loadFile('#avFile', 'av', '#avName');
 loadFile('#avFile2', 'av', '#avName2');
 $('#decoClear').addEventListener('click', () => { imgs.deco = null; $('#decoName').textContent = 'None'; $('#decoFile').value = ''; update(); });
+
+
+// ---------- handles list ----------
+const MAX_HANDLES = 6;
+function renderHandles() {
+  const list = $('#handleList');
+  list.innerHTML = '';
+  s.handles.forEach((hd, i) => {
+    const row = document.createElement('div');
+    row.className = 'hrow';
+    row.innerHTML = `<select aria-label="Platform"><option value="instagram">Instagram</option><option value="x">X</option><option value="tiktok">TikTok</option><option value="facebook">Facebook</option><option value="linkedin">LinkedIn</option><option value="youtube">YouTube</option><option value="threads">Threads</option><option value="none">No icon</option></select><input type="text" placeholder="@yourhandle" aria-label="Handle"><button class="rm" title="Remove" aria-label="Remove handle">×</button>`;
+    const [sel, inp, rm] = row.children;
+    sel.value = hd.platform; inp.value = hd.text;
+    sel.onchange = () => { hd.platform = sel.value; draw(); cacheBlob(); };
+    inp.oninput = () => { hd.text = inp.value; draw(); cacheBlob(); };
+    rm.onclick = () => { s.handles.splice(i, 1); if (!s.handles.length) s.handles.push({ platform:'instagram', text:'' }); renderHandles(); update(); };
+    rm.classList.toggle('hidden', s.handles.length === 1 && !hd.text);
+    list.appendChild(row);
+  });
+  $('#addHandle').classList.toggle('hidden', s.handles.length >= MAX_HANDLES);
+}
+$('#addHandle').addEventListener('click', () => {
+  const used = s.handles.map(hd => hd.platform);
+  const next = ['instagram','x','tiktok','facebook','linkedin','youtube','threads'].find(p => !used.includes(p)) || 'none';
+  s.handles.push({ platform: next, text: s.handles[s.handles.length-1]?.text || '' });
+  renderHandles(); update();
+  $('#handleList').lastElementChild.querySelector('input').select();
+});
 
 // ---------- saving ----------
 const FILE_NAME = 'ideatity-post.png';
@@ -667,6 +731,7 @@ else if (isTouch) $('#download').textContent = 'Save image';
 
 // boot
 Object.assign(s, TEMPLATES.quote);
+renderHandles();
 update();
 if (document.fonts) {
   Promise.all(['400 40px "EB Garamond"','700 40px "EB Garamond"','400 40px Inter','700 40px Inter','400 40px "Playfair Display"','400 40px Caveat']
