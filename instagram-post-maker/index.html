@@ -241,6 +241,20 @@
         <div class="switch"><span>Signature at the bottom</span><input type="checkbox" data-k="sigOn"></div>
         <div data-show="sigOn">
           <input type="text" data-k="sig" placeholder="@yourhandle">
+          <div style="margin-top:12px"><span class="lbl">Platform icon</span>
+            <select data-k="platform">
+              <option value="instagram">Instagram</option>
+              <option value="x">X (Twitter)</option>
+              <option value="tiktok">TikTok</option>
+              <option value="facebook">Facebook</option>
+              <option value="linkedin">LinkedIn</option>
+              <option value="youtube">YouTube</option>
+              <option value="threads">Threads</option>
+              <option value="none">No icon</option>
+            </select>
+          </div>
+          <div class="switch" style="margin-top:12px"><span>Show my photo too</span><input type="checkbox" data-k="sigPhoto"></div>
+          <div data-show="sigPhoto" class="file" style="margin-top:12px"><label class="pickbtn" for="avFile2">Choose photo</label><input type="file" id="avFile2" accept="image/*"><small id="avName2">None</small></div>
           <div style="margin-top:12px"><span class="lbl">Position</span>
             <div class="seg" data-seg="sigPos"><button data-v="left">Bottom left</button><button data-v="center">Center</button><button data-v="right">Bottom right</button></div>
           </div>
@@ -278,11 +292,11 @@ const TEMPLATES = {
     bg:'plain', c1:'#fdf7ea', font:'garamond', align:'center', valign:'middle', size:60,
     profileOn:false, sigOn:true, sigPos:'center', boldFirst:false, ratio:'1080x1350', tc:'auto',
     text:"I was in awe of her throughout her shoot.\n\nI mean! I had seen videos and pictures of her before, and I remember wondering if someone was always behind the camera telling her what to say, how to pose, how to act",
-    sig:'Your Name Photography',
+    sig:'@yourhandle', platform:'instagram', sigPhoto:false,
   },
   profile: {
     bg:'plain', c1:'#ffffff', font:'inter', align:'left', valign:'top', size:48,
-    profileOn:true, sigOn:false, sigPos:'left', boldFirst:true, ratio:'1080x1350', tc:'#111111',
+    profileOn:true, sigOn:false, sigPos:'left', boldFirst:true, ratio:'1080x1350', tc:'#111111', platform:'instagram', sigPhoto:false,
     text:"There's a thin line between parental love and pressure:\nWe could see her subtly pressuring her daughter into getting married.\n\nAnd this tells us something: our mothers can genuinely want the best for us, but the means through which they pursue what they believe is best for us might be hurting.\n\nThey can guide, advise, share their own experiences but they should never be the ones to pick our life partners.",
     pname:'Your Name', phandle:'@yourhandle',
   },
@@ -291,7 +305,7 @@ const TEMPLATES = {
 const s = {
   tpl:'quote', bg:'plain', c1:'#fdf7ea', c2:'#ffffff', angle:135, dim:30,
   font:'garamond', size:60, tc:'auto', align:'center', valign:'middle', boldFirst:false,
-  ratio:'1080x1350', text:'', sigOn:true, sig:'', sigPos:'center',
+  ratio:'1080x1350', text:'', sigOn:true, sig:'', sigPos:'center', platform:'instagram', sigPhoto:false,
   profileOn:false, pname:'Your Name', phandle:'@yourhandle',
 };
 const imgs = { bg:null, deco:null, av:null };
@@ -329,6 +343,52 @@ function layout(S, maxW) {
     out.push({ t:line, bold });
   });
   return out;
+}
+
+
+function drawBadge(p, x, y, z) {
+  ctx.save();
+  ctx.beginPath(); ctx.roundRect(x, y, z, z, z*0.28); ctx.clip();
+  const white = '#fff', c = z/2;
+  if (p === 'instagram') {
+    const g = ctx.createLinearGradient(x, y+z, x+z, y);
+    g.addColorStop(0, '#feda75'); g.addColorStop(.35, '#fa7e1e'); g.addColorStop(.6, '#d62976'); g.addColorStop(1, '#4f5bd5');
+    ctx.fillStyle = g; ctx.fillRect(x, y, z, z);
+    ctx.strokeStyle = white; ctx.lineWidth = z*0.08;
+    ctx.beginPath(); ctx.roundRect(x+z*.22, y+z*.22, z*.56, z*.56, z*.17); ctx.stroke();
+    ctx.beginPath(); ctx.arc(x+c, y+c, z*.14, 0, 7); ctx.stroke();
+    ctx.fillStyle = white; ctx.beginPath(); ctx.arc(x+z*.67, y+z*.33, z*.04, 0, 7); ctx.fill();
+  } else if (p === 'x') {
+    ctx.fillStyle = '#000'; ctx.fillRect(x, y, z, z);
+    ctx.strokeStyle = white; ctx.lineCap = 'round';
+    ctx.lineWidth = z*0.1; ctx.beginPath(); ctx.moveTo(x+z*.28, y+z*.26); ctx.lineTo(x+z*.72, y+z*.74); ctx.stroke();
+    ctx.lineWidth = z*0.055; ctx.beginPath(); ctx.moveTo(x+z*.72, y+z*.26); ctx.lineTo(x+z*.28, y+z*.74); ctx.stroke();
+  } else if (p === 'tiktok') {
+    ctx.fillStyle = '#000'; ctx.fillRect(x, y, z, z);
+    ctx.translate(x+z*.2, y+z*.2); ctx.scale(z*.6/24, z*.6/24);
+    const path = new Path2D('M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z');
+    ctx.translate(-1, 0); ctx.fillStyle = '#25f4ee'; ctx.fill(path);
+    ctx.translate(2, 1); ctx.fillStyle = '#fe2c55'; ctx.fill(path);
+    ctx.translate(-1, -1); ctx.fillStyle = white; ctx.fill(path);
+  } else if (p === 'facebook') {
+    ctx.fillStyle = '#1877f2'; ctx.fillRect(x, y, z, z);
+    ctx.fillStyle = white; ctx.font = `700 ${z*.78}px Arial, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.fillText('f', x+z*.58, y+z*.86);
+  } else if (p === 'linkedin') {
+    ctx.fillStyle = '#0a66c2'; ctx.fillRect(x, y, z, z);
+    ctx.fillStyle = white; ctx.font = `700 ${z*.5}px Arial, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('in', x+c, y+c+z*.03);
+  } else if (p === 'youtube') {
+    ctx.fillStyle = '#ff0000'; ctx.fillRect(x, y, z, z);
+    ctx.fillStyle = white; ctx.beginPath(); ctx.roundRect(x+z*.14, y+z*.27, z*.72, z*.46, z*.13); ctx.fill();
+    ctx.fillStyle = '#ff0000'; ctx.beginPath();
+    ctx.moveTo(x+z*.44, y+z*.38); ctx.lineTo(x+z*.62, y+z*.5); ctx.lineTo(x+z*.44, y+z*.62); ctx.fill();
+  } else if (p === 'threads') {
+    ctx.fillStyle = '#000'; ctx.fillRect(x, y, z, z);
+    ctx.fillStyle = white; ctx.font = `600 ${z*.7}px Arial, sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('@', x+c, y+c+z*.03);
+  }
+  ctx.restore();
 }
 
 function draw() {
@@ -399,12 +459,25 @@ function draw() {
     ctx.fillText(l.t, x, startY + i*lh + lh/2);
   });
 
-  // signature
+  // signature: [photo] [platform badge] handle
   if (s.sigOn && s.sig.trim()) {
+    const z = 56, gap = 16, txt = s.sig.trim();
     ctx.font = `500 40px ${FONTS[s.font]}`;
-    ctx.textBaseline = 'alphabetic'; ctx.textAlign = s.sigPos;
-    const sx = s.sigPos === 'left' ? pad : s.sigPos === 'right' ? w - pad : w/2;
-    ctx.fillText(s.sig.trim(), sx, h - pad);
+    const showPhoto = s.sigPhoto && imgs.av, showBadge = s.platform !== 'none';
+    const gw = (showPhoto ? z + gap : 0) + (showBadge ? z + gap : 0) + ctx.measureText(txt).width;
+    let gx = s.sigPos === 'left' ? pad : s.sigPos === 'right' ? w - pad - gw : (w - gw)/2;
+    const gy = h - pad - z + 4;
+    if (showPhoto) {
+      ctx.save(); ctx.beginPath(); ctx.arc(gx + z/2, gy + z/2, z/2, 0, 7); ctx.clip();
+      cover(imgs.av, gx, gy, z, z); ctx.restore();
+      ctx.strokeStyle = col; ctx.globalAlpha = .35; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(gx + z/2, gy + z/2, z/2, 0, 7); ctx.stroke(); ctx.globalAlpha = 1;
+      gx += z + gap;
+    }
+    if (showBadge) { drawBadge(s.platform, gx, gy, z); gx += z + gap; }
+    ctx.fillStyle = col; ctx.font = `500 40px ${FONTS[s.font]}`;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(txt, gx, gy + z/2 + 2);
   }
 }
 
@@ -489,6 +562,7 @@ function loadFile(inputSel, key, nameSel, afterBg) {
 loadFile('#bgFile', 'bg', '#bgFileName');
 loadFile('#decoFile', 'deco', '#decoName');
 loadFile('#avFile', 'av', '#avName');
+loadFile('#avFile2', 'av', '#avName2');
 $('#decoClear').addEventListener('click', () => { imgs.deco = null; $('#decoName').textContent = 'None'; $('#decoFile').value = ''; update(); });
 
 $('#download').addEventListener('click', () => {
