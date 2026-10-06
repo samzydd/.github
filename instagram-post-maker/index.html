@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Instagram Post Maker</title>
+<style>
+  :root { --bg:#f4f4f6; --panel:#fff; --text:#1c1c21; --muted:#6b6b76; --border:#dcdce3; --accent:#6c4cf1; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#141417; --panel:#1f1f24; --text:#f1f1f4; --muted:#9a9aa6; --border:#34343c; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:var(--bg); color:var(--text); }
+  main { max-width:1000px; margin:0 auto; padding:24px 16px; display:grid; gap:24px; grid-template-columns: 340px 1fr; }
+  @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
+  h1 { grid-column:1/-1; margin:0; font-size:1.5rem; }
+  .panel { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:14px; }
+  label { font-size:.85rem; color:var(--muted); display:flex; flex-direction:column; gap:6px; }
+  textarea, input[type=text], select { font:inherit; padding:8px 10px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text); }
+  textarea { min-height:110px; resize:vertical; }
+  input[type=color] { width:100%; height:38px; border:1px solid var(--border); border-radius:8px; padding:2px; background:var(--bg); }
+  .row { display:flex; gap:10px; } .row > * { flex:1; }
+  .seg { display:flex; border:1px solid var(--border); border-radius:8px; overflow:hidden; }
+  .seg button { flex:1; padding:8px; border:0; background:var(--bg); color:var(--text); font:inherit; cursor:pointer; }
+  .seg button.on { background:var(--accent); color:#fff; }
+  .check { flex-direction:row; align-items:center; gap:8px; color:var(--text); font-size:.95rem; }
+  .download { padding:12px; border:0; border-radius:8px; background:var(--accent); color:#fff; font:inherit; font-weight:600; cursor:pointer; }
+  .preview { display:flex; justify-content:center; align-items:flex-start; }
+  canvas { width:100%; max-width:540px; height:auto; border-radius:8px; box-shadow:0 4px 24px rgba(0,0,0,.25); }
+  .hidden { display:none !important; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Instagram Post Maker</h1>
+
+  <section class="panel">
+    <label>Your post
+      <textarea id="text" placeholder="Write your post here…">Write something worth sharing.</textarea>
+    </label>
+
+    <div>
+      <label>Background</label>
+      <div class="seg" id="bgType">
+        <button data-v="plain" class="on">Plain</button>
+        <button data-v="gradient">Gradient</button>
+      </div>
+    </div>
+
+    <div class="row">
+      <label>Color <input type="color" id="c1" value="#6c4cf1"></label>
+      <label id="c2wrap" class="hidden">Color 2 <input type="color" id="c2" value="#f14c8a"></label>
+    </div>
+    <label id="angleWrap" class="hidden"><span>Gradient angle: <span id="angleVal">135</span>°</span>
+      <input type="range" id="angle" min="0" max="360" value="135">
+    </label>
+
+    <div class="row">
+      <label>Text color <input type="color" id="tc" value="#ffffff"></label>
+      <label>Font
+        <select id="font">
+          <option value="system-ui, sans-serif">Sans</option>
+          <option value="Georgia, serif">Serif</option>
+          <option value="'Courier New', monospace">Mono</option>
+          <option value="'Brush Script MT', cursive">Script</option>
+        </select>
+      </label>
+    </div>
+    <label><span>Text size: <span id="sizeVal">64</span>px</span>
+      <input type="range" id="size" min="24" max="140" value="64">
+    </label>
+    <label>Size
+      <select id="ratio">
+        <option value="1080x1080">Square 1080×1080</option>
+        <option value="1080x1350">Portrait 1080×1350</option>
+        <option value="1080x1920">Story 1080×1920</option>
+      </select>
+    </label>
+
+    <label class="check"><input type="checkbox" id="showHandle"> Include my handle</label>
+    <div id="handleOpts" class="hidden" style="display:flex;flex-direction:column;gap:14px">
+      <label>Handle <input type="text" id="handle" value="@yourhandle"></label>
+      <div class="seg" id="pos">
+        <button data-v="left" class="on">Bottom left</button>
+        <button data-v="right">Bottom right</button>
+      </div>
+    </div>
+
+    <button class="download" id="download">Download PNG</button>
+  </section>
+
+  <section class="preview"><canvas id="cv"></canvas></section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const cv = $('cv'), ctx = cv.getContext('2d');
+const state = { bg:'plain', pos:'left' };
+
+function wrap(text, maxW) {
+  const lines = [];
+  for (const para of text.split('\n')) {
+    let line = '';
+    for (const word of para.split(/\s+/).filter(Boolean)) {
+      const test = line ? line + ' ' + word : word;
+      if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = word; }
+      else line = test;
+    }
+    lines.push(line);
+  }
+  return lines;
+}
+
+function draw() {
+  const [w, h] = $('ratio').value.split('x').map(Number);
+  cv.width = w; cv.height = h;
+
+  if (state.bg === 'gradient') {
+    const a = $('angle').value * Math.PI / 180;
+    const dx = Math.sin(a), dy = -Math.cos(a), r = Math.abs(w*dx) / 2 + Math.abs(h*dy) / 2;
+    const g = ctx.createLinearGradient(w/2 - dx*r, h/2 - dy*r, w/2 + dx*r, h/2 + dy*r);
+    g.addColorStop(0, $('c1').value); g.addColorStop(1, $('c2').value);
+    ctx.fillStyle = g;
+  } else ctx.fillStyle = $('c1').value;
+  ctx.fillRect(0, 0, w, h);
+
+  const pad = 90, size = +$('size').value, lh = size * 1.25;
+  ctx.fillStyle = $('tc').value;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = `700 ${size}px ${$('font').value}`;
+  const lines = wrap($('text').value, w - pad * 2);
+  const top = h/2 - (lines.length - 1) * lh / 2;
+  lines.forEach((l, i) => ctx.fillText(l, w/2, top + i * lh));
+
+  if ($('showHandle').checked && $('handle').value.trim()) {
+    ctx.font = `600 38px ${$('font').value}`;
+    ctx.textBaseline = 'alphabetic';
+    ctx.textAlign = state.pos;
+    ctx.fillText($('handle').value.trim(), state.pos === 'left' ? 60 : w - 60, h - 60);
+  }
+}
+
+function seg(id, key, cb) {
+  $(id).addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    [...$(id).children].forEach(x => x.classList.toggle('on', x === b));
+    state[key] = b.dataset.v; cb && cb(); draw();
+  });
+}
+seg('bgType', 'bg', () => {
+  const g = state.bg === 'gradient';
+  $('c2wrap').classList.toggle('hidden', !g);
+  $('angleWrap').classList.toggle('hidden', !g);
+});
+seg('pos', 'pos');
+
+$('showHandle').addEventListener('change', () => {
+  $('handleOpts').classList.toggle('hidden', !$('showHandle').checked);
+});
+$('angle').addEventListener('input', () => $('angleVal').textContent = $('angle').value);
+$('size').addEventListener('input', () => $('sizeVal').textContent = $('size').value);
+document.querySelectorAll('input, textarea, select').forEach(el => el.addEventListener('input', draw));
+$('showHandle').addEventListener('change', draw);
+
+$('download').addEventListener('click', () => {
+  const a = document.createElement('a');
+  a.download = 'instagram-post.png';
+  a.href = cv.toDataURL('image/png');
+  a.click();
+});
+
+draw();
+</script>
+</body>
+</html>
