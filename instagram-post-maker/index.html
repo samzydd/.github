@@ -3,173 +3,500 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Instagram Post Maker</title>
+<title>Post Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=EB+Garamond:wght@400;700&family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;700&display=swap">
 <style>
-  :root { --bg:#f4f4f6; --panel:#fff; --text:#1c1c21; --muted:#6b6b76; --border:#dcdce3; --accent:#6c4cf1; }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg:#141417; --panel:#1f1f24; --text:#f1f1f4; --muted:#9a9aa6; --border:#34343c; }
+  :root {
+    --ink:#1d1d24; --ink2:#5d5d6b;
+    --glass:rgba(255,255,255,.42); --glass-strong:rgba(255,255,255,.7);
+    --edge:rgba(255,255,255,.75); --edge-dim:rgba(255,255,255,.25);
+    --shadow:0 10px 40px rgba(60,40,120,.16);
+    --accent:#0a84ff;
+    --b1:#ffb3d1; --b2:#a8c8ff; --b3:#ffd8a8; --b4:#c9b6ff; --base:#f4f2fb;
   }
-  * { box-sizing: border-box; }
-  body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; background:var(--bg); color:var(--text); }
-  main { max-width:1000px; margin:0 auto; padding:24px 16px; display:grid; gap:24px; grid-template-columns: 340px 1fr; }
-  @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
-  h1 { grid-column:1/-1; margin:0; font-size:1.5rem; }
-  .panel { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:14px; }
-  label { font-size:.85rem; color:var(--muted); display:flex; flex-direction:column; gap:6px; }
-  textarea, input[type=text], select { font:inherit; padding:8px 10px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text); }
-  textarea { min-height:110px; resize:vertical; }
-  input[type=color] { width:100%; height:38px; border:1px solid var(--border); border-radius:8px; padding:2px; background:var(--bg); }
-  .row { display:flex; gap:10px; } .row > * { flex:1; }
-  .seg { display:flex; border:1px solid var(--border); border-radius:8px; overflow:hidden; }
-  .seg button { flex:1; padding:8px; border:0; background:var(--bg); color:var(--text); font:inherit; cursor:pointer; }
-  .seg button.on { background:var(--accent); color:#fff; }
-  .check { flex-direction:row; align-items:center; gap:8px; color:var(--text); font-size:.95rem; }
-  .download { padding:12px; border:0; border-radius:8px; background:var(--accent); color:#fff; font:inherit; font-weight:600; cursor:pointer; }
-  .preview { display:flex; justify-content:center; align-items:flex-start; }
-  canvas { width:100%; max-width:540px; height:auto; border-radius:8px; box-shadow:0 4px 24px rgba(0,0,0,.25); }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ink:#f5f5f8; --ink2:#a9a9b8;
+      --glass:rgba(40,40,56,.45); --glass-strong:rgba(80,80,104,.6);
+      --edge:rgba(255,255,255,.3); --edge-dim:rgba(255,255,255,.1);
+      --shadow:0 10px 40px rgba(0,0,0,.4);
+      --b1:#7a2f5c; --b2:#2f4f8f; --b3:#7a5530; --b4:#4a3a8f; --base:#0f0f16;
+    }
+  }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html { color-scheme: light dark; }
+  body {
+    margin:0; min-height:100vh; color:var(--ink); background:var(--base);
+    font-family:-apple-system, BlinkMacSystemFont, "SF Pro Display", Inter, system-ui, sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .backdrop { position:fixed; inset:0; z-index:-1; overflow:hidden; background:var(--base); }
+  .blob { position:absolute; border-radius:50%; filter:blur(70px); opacity:.9; }
+  .blob.a { width:46vw; height:46vw; left:-8vw; top:-10vw; background:var(--b1); }
+  .blob.b { width:42vw; height:42vw; right:-10vw; top:5vh; background:var(--b2); }
+  .blob.c { width:38vw; height:38vw; left:25vw; bottom:-18vw; background:var(--b3); }
+  .blob.d { width:30vw; height:30vw; right:8vw; bottom:-8vw; background:var(--b4); }
+
+  /* liquid glass surface */
+  .glass {
+    position:relative;
+    background:var(--glass);
+    -webkit-backdrop-filter:blur(28px) saturate(190%);
+    backdrop-filter:blur(28px) saturate(190%);
+    border:1px solid var(--edge-dim);
+    box-shadow: var(--shadow), inset 0 1.5px 0 var(--edge), inset 0 -1px 0 var(--edge-dim), inset 1px 0 0 var(--edge-dim);
+  }
+  .glass::before { /* specular highlight */
+    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    background:linear-gradient(155deg, rgba(255,255,255,.35) 0%, rgba(255,255,255,0) 38%);
+  }
+
+  header.top { max-width:1120px; margin:0 auto; padding:22px 20px 0; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  header.top h1 { margin:0; font-size:1.35rem; font-weight:700; letter-spacing:-.02em; }
+  header.top p { margin:2px 0 0; color:var(--ink2); font-size:.9rem; }
+
+  main { max-width:1120px; margin:0 auto; padding:20px; display:grid; grid-template-columns:minmax(0,1fr) 400px; gap:24px; align-items:start; }
+  @media (max-width: 900px) { main { grid-template-columns:1fr; } }
+
+  .stage { position:sticky; top:20px; display:flex; flex-direction:column; align-items:center; gap:16px; }
+  @media (max-width: 900px) { .stage { position:static; } }
+  .canvas-wrap { width:100%; max-width:480px; padding:12px; border-radius:30px; }
+  canvas { display:block; width:100%; height:auto; border-radius:20px; box-shadow:0 2px 20px rgba(0,0,0,.18); }
+
+  .btn {
+    appearance:none; border:0; cursor:pointer; font:inherit; font-weight:600; color:#fff;
+    padding:14px 28px; border-radius:999px; background:var(--accent);
+    box-shadow:0 8px 24px rgba(10,132,255,.4), inset 0 1.5px 0 rgba(255,255,255,.5);
+    transition:transform .15s ease;
+  }
+  .btn:active { transform:scale(.97); }
+
+  .panel { border-radius:30px; padding:8px; display:flex; flex-direction:column; gap:6px; }
+  details { border-radius:22px; }
+  details[open] { background:var(--glass); }
+  summary {
+    list-style:none; cursor:pointer; padding:14px 16px; font-weight:600; font-size:1rem;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  summary::-webkit-details-marker { display:none; }
+  summary::after { content:"›"; color:var(--ink2); font-size:1.4rem; transform:rotate(90deg); transition:transform .2s; line-height:1; }
+  details[open] summary::after { transform:rotate(-90deg); }
+  .sec { padding:0 16px 16px; display:flex; flex-direction:column; gap:14px; }
+  .lbl { font-size:.78rem; font-weight:600; letter-spacing:.04em; text-transform:uppercase; color:var(--ink2); margin-bottom:6px; display:block; }
   .hidden { display:none !important; }
+
+  /* controls */
+  .seg { display:flex; padding:3px; gap:2px; border-radius:999px; background:var(--glass); border:1px solid var(--edge-dim); box-shadow:inset 0 1px 2px rgba(0,0,0,.08); }
+  .seg button { flex:1; border:0; background:transparent; color:var(--ink); font:inherit; font-size:.9rem; font-weight:500; padding:8px 6px; border-radius:999px; cursor:pointer; transition:background .2s; }
+  .seg button.on { background:var(--glass-strong); font-weight:600; box-shadow:0 2px 8px rgba(0,0,0,.14), inset 0 1px 0 var(--edge); }
+
+  .templates { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .tpl { border:2px solid transparent; background:var(--glass); border-radius:20px; padding:10px; cursor:pointer; color:var(--ink); font:inherit; font-weight:600; font-size:.85rem; display:flex; flex-direction:column; gap:8px; align-items:center; }
+  .tpl.on { border-color:var(--accent); }
+  .tpl .thumb { width:100%; aspect-ratio:4/5; border-radius:10px; position:relative; overflow:hidden; box-shadow:0 1px 6px rgba(0,0,0,.2); }
+  .tpl .thumb i { position:absolute; display:block; border-radius:3px; background:currentColor; opacity:.7; height:4px; }
+
+  .swatches { display:flex; flex-wrap:wrap; gap:10px; }
+  .sw { width:36px; height:36px; border-radius:50%; border:2px solid var(--edge); cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,.18); padding:0; }
+  .sw.on { outline:3px solid var(--accent); outline-offset:2px; }
+  .sw.pick { position:relative; background:conic-gradient(red,yellow,lime,aqua,blue,magenta,red); overflow:hidden; }
+  .sw.pick input { position:absolute; inset:-6px; opacity:0; width:60px; height:60px; cursor:pointer; }
+
+  textarea, input[type=text], select {
+    width:100%; font:inherit; color:var(--ink); padding:12px 14px; border-radius:16px;
+    background:var(--glass-strong); border:1px solid var(--edge-dim); outline:none;
+    box-shadow:inset 0 1px 3px rgba(0,0,0,.08);
+  }
+  textarea { min-height:150px; resize:vertical; line-height:1.4; }
+  textarea:focus, input[type=text]:focus, select:focus { border-color:var(--accent); }
+  input[type=range] { width:100%; accent-color:var(--accent); }
+  .row { display:flex; gap:10px; align-items:center; }
+  .row > * { flex:1; }
+  .switch { display:flex; align-items:center; justify-content:space-between; gap:10px; font-weight:500; }
+  .switch input { appearance:none; width:50px; height:30px; border-radius:999px; background:rgba(120,120,128,.35); position:relative; cursor:pointer; transition:background .2s; flex:none; }
+  .switch input::after { content:""; position:absolute; top:2px; left:2px; width:26px; height:26px; border-radius:50%; background:#fff; box-shadow:0 2px 6px rgba(0,0,0,.3); transition:transform .2s; }
+  .switch input:checked { background:#34c759; }
+  .switch input:checked::after { transform:translateX(20px); }
+  .file { display:flex; align-items:center; gap:10px; }
+  .file label.pickbtn { cursor:pointer; padding:10px 16px; border-radius:999px; background:var(--glass-strong); border:1px solid var(--edge-dim); font-weight:600; font-size:.88rem; box-shadow:inset 0 1px 0 var(--edge); white-space:nowrap; flex:none; }
+  .file input[type=file] { display:none; }
+  .file small { color:var(--ink2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .link { background:none; border:0; color:var(--accent); font:inherit; font-size:.85rem; font-weight:600; cursor:pointer; padding:0; }
 </style>
 </head>
 <body>
+<div class="backdrop"><div class="blob a"></div><div class="blob b"></div><div class="blob c"></div><div class="blob d"></div></div>
+
+<header class="top">
+  <div>
+    <h1>Post Studio</h1>
+    <p>Write it. Style it. Download it for Instagram.</p>
+  </div>
+</header>
+
 <main>
-  <h1>Instagram Post Maker</h1>
-
-  <section class="panel">
-    <label>Your post
-      <textarea id="text" placeholder="Write your post here…">Write something worth sharing.</textarea>
-    </label>
-
-    <div>
-      <label>Background</label>
-      <div class="seg" id="bgType">
-        <button data-v="plain" class="on">Plain</button>
-        <button data-v="gradient">Gradient</button>
-      </div>
-    </div>
-
-    <div class="row">
-      <label>Color <input type="color" id="c1" value="#6c4cf1"></label>
-      <label id="c2wrap" class="hidden">Color 2 <input type="color" id="c2" value="#f14c8a"></label>
-    </div>
-    <label id="angleWrap" class="hidden"><span>Gradient angle: <span id="angleVal">135</span>°</span>
-      <input type="range" id="angle" min="0" max="360" value="135">
-    </label>
-
-    <div class="row">
-      <label>Text color <input type="color" id="tc" value="#ffffff"></label>
-      <label>Font
-        <select id="font">
-          <option value="system-ui, sans-serif">Sans</option>
-          <option value="Georgia, serif">Serif</option>
-          <option value="'Courier New', monospace">Mono</option>
-          <option value="'Brush Script MT', cursive">Script</option>
-        </select>
-      </label>
-    </div>
-    <label><span>Text size: <span id="sizeVal">64</span>px</span>
-      <input type="range" id="size" min="24" max="140" value="64">
-    </label>
-    <label>Size
-      <select id="ratio">
-        <option value="1080x1080">Square 1080×1080</option>
-        <option value="1080x1350">Portrait 1080×1350</option>
-        <option value="1080x1920">Story 1080×1920</option>
-      </select>
-    </label>
-
-    <label class="check"><input type="checkbox" id="showHandle"> Include my handle</label>
-    <div id="handleOpts" class="hidden" style="display:flex;flex-direction:column;gap:14px">
-      <label>Handle <input type="text" id="handle" value="@yourhandle"></label>
-      <div class="seg" id="pos">
-        <button data-v="left" class="on">Bottom left</button>
-        <button data-v="right">Bottom right</button>
-      </div>
-    </div>
-
-    <button class="download" id="download">Download PNG</button>
+  <section class="stage">
+    <div class="glass canvas-wrap"><canvas id="cv"></canvas></div>
+    <button class="btn" id="download">Download image</button>
   </section>
 
-  <section class="preview"><canvas id="cv"></canvas></section>
+  <section class="glass panel">
+
+    <details open>
+      <summary>1 · Choose a style</summary>
+      <div class="sec">
+        <div class="templates">
+          <button class="tpl" data-tpl="quote">
+            <div class="thumb" style="background:#fdf7ea;color:#4a3524">
+              <i style="left:20%;right:20%;top:38%"></i><i style="left:14%;right:14%;top:46%"></i><i style="left:22%;right:22%;top:54%"></i>
+              <i style="left:30%;right:30%;bottom:10%;opacity:.5"></i>
+            </div>Quote
+          </button>
+          <button class="tpl" data-tpl="profile">
+            <div class="thumb" style="background:#fff;color:#222">
+              <i style="left:10%;width:14%;top:8%;height:10px;border-radius:50%"></i><i style="left:28%;width:30%;top:10%"></i>
+              <i style="left:10%;right:20%;top:34%"></i><i style="left:10%;right:12%;top:42%"></i><i style="left:10%;right:30%;top:50%"></i><i style="left:10%;right:16%;top:62%"></i>
+              <i style="right:0;top:0;width:30%;height:16px;border-radius:0 0 0 14px;background:#f6a6c1;opacity:1"></i>
+            </div>Profile post
+          </button>
+        </div>
+      </div>
+    </details>
+
+    <details open>
+      <summary>2 · Write your post</summary>
+      <div class="sec">
+        <textarea data-k="text" placeholder="Write your post here…"></textarea>
+        <div class="switch"><span>Bold first line</span><input type="checkbox" data-k="boldFirst"></div>
+        <div>
+          <span class="lbl">Alignment</span>
+          <div class="seg" data-seg="align"><button data-v="left">Left</button><button data-v="center">Center</button></div>
+        </div>
+        <div>
+          <span class="lbl">Position</span>
+          <div class="seg" data-seg="valign"><button data-v="top">Top</button><button data-v="middle">Middle</button></div>
+        </div>
+      </div>
+    </details>
+
+    <details open>
+      <summary>3 · Background</summary>
+      <div class="sec">
+        <div class="seg" data-seg="bg"><button data-v="plain">Color</button><button data-v="gradient">Gradient</button><button data-v="image">Photo</button></div>
+
+        <div data-show="bg=plain"><span class="lbl">Pick a color</span><div class="swatches" id="colorSw"></div></div>
+        <div data-show="bg=gradient">
+          <span class="lbl">Pick a gradient</span><div class="swatches" id="gradSw"></div>
+          <div style="margin-top:14px"><span class="lbl">Angle</span><input type="range" min="0" max="360" data-k="angle"></div>
+        </div>
+        <div data-show="bg=image">
+          <span class="lbl">Background photo</span>
+          <div class="file"><label class="pickbtn" for="bgFile">Choose photo</label><input type="file" id="bgFile" accept="image/*"><small id="bgFileName">None</small></div>
+          <div style="margin-top:14px"><span class="lbl">Darken photo</span><input type="range" min="0" max="80" data-k="dim"></div>
+        </div>
+
+        <div>
+          <span class="lbl">Corner decoration (optional)</span>
+          <div class="file"><label class="pickbtn" for="decoFile">Add image</label><input type="file" id="decoFile" accept="image/*"><small id="decoName">None</small><button class="link hidden" id="decoClear">Remove</button></div>
+        </div>
+      </div>
+    </details>
+
+    <details>
+      <summary>4 · Text style</summary>
+      <div class="sec">
+        <div><span class="lbl">Font</span>
+          <select data-k="font">
+            <option value="garamond">Elegant serif</option>
+            <option value="inter">Clean sans</option>
+            <option value="playfair">Editorial serif</option>
+            <option value="caveat">Handwritten</option>
+          </select>
+        </div>
+        <div><span class="lbl">Size</span><input type="range" min="28" max="96" data-k="size"></div>
+        <div>
+          <span class="lbl">Text color</span>
+          <div class="swatches" id="textSw"></div>
+        </div>
+        <div><span class="lbl">Image size</span>
+          <select data-k="ratio">
+            <option value="1080x1350">Portrait 4:5 (best for feed)</option>
+            <option value="1080x1080">Square 1:1</option>
+            <option value="1080x1920">Story 9:16</option>
+          </select>
+        </div>
+      </div>
+    </details>
+
+    <details>
+      <summary>5 · Your handle &amp; profile</summary>
+      <div class="sec">
+        <div class="switch"><span>Signature at the bottom</span><input type="checkbox" data-k="sigOn"></div>
+        <div data-show="sigOn">
+          <input type="text" data-k="sig" placeholder="@yourhandle">
+          <div style="margin-top:12px"><span class="lbl">Position</span>
+            <div class="seg" data-seg="sigPos"><button data-v="left">Bottom left</button><button data-v="center">Center</button><button data-v="right">Bottom right</button></div>
+          </div>
+        </div>
+        <div class="switch"><span>Profile header (photo, name, handle)</span><input type="checkbox" data-k="profileOn"></div>
+        <div data-show="profileOn">
+          <div class="file" style="margin-bottom:12px"><label class="pickbtn" for="avFile">Profile photo</label><input type="file" id="avFile" accept="image/*"><small id="avName">None</small></div>
+          <div class="row"><input type="text" data-k="pname" placeholder="Your name"><input type="text" data-k="phandle" placeholder="@handle"></div>
+        </div>
+      </div>
+    </details>
+
+  </section>
 </main>
 
 <script>
-const $ = id => document.getElementById(id);
-const cv = $('cv'), ctx = cv.getContext('2d');
-const state = { bg:'plain', pos:'left' };
+const $ = s => document.querySelector(s);
+const cv = $('#cv'), ctx = cv.getContext('2d');
 
-function wrap(text, maxW) {
-  const lines = [];
-  for (const para of text.split('\n')) {
+const FONTS = {
+  garamond:"'EB Garamond', Georgia, serif",
+  inter:"'Inter', -apple-system, 'Segoe UI', sans-serif",
+  playfair:"'Playfair Display', Georgia, serif",
+  caveat:"'Caveat', 'Segoe Script', cursive",
+};
+const COLORS = ['#fdf7ea','#ffffff','#f3f0ea','#ffe4ec','#e4f0e1','#dcecff','#efe4ff','#ffd9a8','#1c1c22','#2b3a67'];
+const GRADS = [
+  ['#ff9a9e','#fad0c4'],['#a18cd1','#fbc2eb'],['#84fab0','#8fd3f4'],['#fccb90','#d57eeb'],
+  ['#667eea','#764ba2'],['#f6d365','#fda085'],['#0f2027','#2c5364'],['#f093fb','#f5576c'],
+];
+const TEXT_COLORS = ['auto','#2b2118','#111111','#ffffff','#7a1f3d','#1d3b6e'];
+
+const TEMPLATES = {
+  quote: {
+    bg:'plain', c1:'#fdf7ea', font:'garamond', align:'center', valign:'middle', size:60,
+    profileOn:false, sigOn:true, sigPos:'center', boldFirst:false, ratio:'1080x1350', tc:'auto',
+    text:"I was in awe of her throughout her shoot.\n\nI mean! I had seen videos and pictures of her before, and I remember wondering if someone was always behind the camera telling her what to say, how to pose, how to act",
+    sig:'Your Name Photography',
+  },
+  profile: {
+    bg:'plain', c1:'#ffffff', font:'inter', align:'left', valign:'top', size:48,
+    profileOn:true, sigOn:false, sigPos:'left', boldFirst:true, ratio:'1080x1350', tc:'#111111',
+    text:"There's a thin line between parental love and pressure:\nWe could see her subtly pressuring her daughter into getting married.\n\nAnd this tells us something: our mothers can genuinely want the best for us, but the means through which they pursue what they believe is best for us might be hurting.\n\nThey can guide, advise, share their own experiences but they should never be the ones to pick our life partners.",
+    pname:'Your Name', phandle:'@yourhandle',
+  },
+};
+
+const s = {
+  tpl:'quote', bg:'plain', c1:'#fdf7ea', c2:'#ffffff', angle:135, dim:30,
+  font:'garamond', size:60, tc:'auto', align:'center', valign:'middle', boldFirst:false,
+  ratio:'1080x1350', text:'', sigOn:true, sig:'', sigPos:'center',
+  profileOn:false, pname:'Your Name', phandle:'@yourhandle',
+};
+const imgs = { bg:null, deco:null, av:null };
+
+/* ---------- helpers ---------- */
+function lum(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return 0.299*(n>>16) + 0.587*((n>>8)&255) + 0.114*(n&255);
+}
+function textColor() {
+  if (s.tc !== 'auto') return s.tc;
+  if (s.bg === 'image') return '#ffffff';
+  const l = s.bg === 'gradient' ? (lum(s.c1) + lum(s.c2)) / 2 : lum(s.c1);
+  return l > 140 ? '#2b2118' : '#ffffff';
+}
+function cover(img, x, y, w, h) {
+  const r = Math.max(w/img.width, h/img.height), sw = w/r, sh = h/r;
+  ctx.drawImage(img, (img.width-sw)/2, (img.height-sh)/2, sw, sh, x, y, w, h);
+}
+
+/* ---------- drawing ---------- */
+function layout(S, maxW) {
+  const out = [];
+  s.text.split('\n').forEach((para, idx) => {
+    const bold = s.boldFirst && idx === 0;
+    ctx.font = `${bold ? 700 : 400} ${S}px ${FONTS[s.font]}`;
     let line = '';
-    for (const word of para.split(/\s+/).filter(Boolean)) {
-      const test = line ? line + ' ' + word : word;
-      if (ctx.measureText(test).width > maxW && line) { lines.push(line); line = word; }
+    const words = para.split(/\s+/).filter(Boolean);
+    if (!words.length) { out.push({ t:'', bold }); return; }
+    for (const w of words) {
+      const test = line ? line + ' ' + w : w;
+      if (ctx.measureText(test).width > maxW && line) { out.push({ t:line, bold }); line = w; }
       else line = test;
     }
-    lines.push(line);
-  }
-  return lines;
+    out.push({ t:line, bold });
+  });
+  return out;
 }
 
 function draw() {
-  const [w, h] = $('ratio').value.split('x').map(Number);
+  const [w, h] = s.ratio.split('x').map(Number);
   cv.width = w; cv.height = h;
+  const col = textColor();
 
-  if (state.bg === 'gradient') {
-    const a = $('angle').value * Math.PI / 180;
-    const dx = Math.sin(a), dy = -Math.cos(a), r = Math.abs(w*dx) / 2 + Math.abs(h*dy) / 2;
-    const g = ctx.createLinearGradient(w/2 - dx*r, h/2 - dy*r, w/2 + dx*r, h/2 + dy*r);
-    g.addColorStop(0, $('c1').value); g.addColorStop(1, $('c2').value);
-    ctx.fillStyle = g;
-  } else ctx.fillStyle = $('c1').value;
-  ctx.fillRect(0, 0, w, h);
+  // background
+  if (s.bg === 'gradient') {
+    const a = s.angle * Math.PI/180, dx = Math.sin(a), dy = -Math.cos(a);
+    const r = Math.abs(w*dx)/2 + Math.abs(h*dy)/2;
+    const g = ctx.createLinearGradient(w/2-dx*r, h/2-dy*r, w/2+dx*r, h/2+dy*r);
+    g.addColorStop(0, s.c1); g.addColorStop(1, s.c2);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+  } else if (s.bg === 'image' && imgs.bg) {
+    cover(imgs.bg, 0, 0, w, h);
+    ctx.fillStyle = `rgba(0,0,0,${s.dim/100})`; ctx.fillRect(0, 0, w, h);
+  } else {
+    ctx.fillStyle = s.bg === 'image' ? '#888' : s.c1; ctx.fillRect(0, 0, w, h);
+  }
 
-  const pad = 90, size = +$('size').value, lh = size * 1.25;
-  ctx.fillStyle = $('tc').value;
-  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  ctx.font = `700 ${size}px ${$('font').value}`;
-  const lines = wrap($('text').value, w - pad * 2);
-  const top = h/2 - (lines.length - 1) * lh / 2;
-  lines.forEach((l, i) => ctx.fillText(l, w/2, top + i * lh));
+  // corner decoration (top-right, natural aspect)
+  if (imgs.deco) {
+    const dw = w * 0.4, dh = dw * imgs.deco.height / imgs.deco.width;
+    ctx.drawImage(imgs.deco, w - dw, 0, dw, dh);
+  }
 
-  if ($('showHandle').checked && $('handle').value.trim()) {
-    ctx.font = `600 38px ${$('font').value}`;
-    ctx.textBaseline = 'alphabetic';
-    ctx.textAlign = state.pos;
-    ctx.fillText($('handle').value.trim(), state.pos === 'left' ? 60 : w - 60, h - 60);
+  const pad = Math.round(w * 0.085);
+  let top = pad;
+
+  // profile header
+  if (s.profileOn) {
+    const d = 120, cx = pad + d/2, cy = pad + d/2;
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx, cy, d/2, 0, Math.PI*2); ctx.clip();
+    if (imgs.av) cover(imgs.av, pad, pad, d, d);
+    else { ctx.fillStyle = 'rgba(128,128,128,.35)'; ctx.fillRect(pad, pad, d, d); }
+    ctx.restore();
+    if (!imgs.av) {
+      ctx.fillStyle = col; ctx.font = `600 52px ${FONTS.inter}`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText((s.pname.trim()[0] || '?').toUpperCase(), cx, cy + 2);
+    }
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = col; ctx.font = `700 40px ${FONTS.inter}`;
+    ctx.fillText(s.pname, pad + d + 28, pad + d/2 - 6);
+    ctx.globalAlpha = .6; ctx.font = `400 34px ${FONTS.inter}`;
+    ctx.fillText(s.phandle, pad + d + 28, pad + d/2 + 38);
+    ctx.globalAlpha = 1;
+    top = pad + d + 70;
+  }
+
+  // body text (auto-shrinks to fit)
+  const bottom = s.sigOn && s.sig.trim() ? h - pad - 70 : h - pad;
+  let S = s.size, lines;
+  for (;;) {
+    lines = layout(S, w - pad*2);
+    if (lines.length * S * 1.32 <= bottom - top || S <= 22) break;
+    S -= 2;
+  }
+  const lh = S * 1.32, total = lines.length * lh;
+  const startY = s.valign === 'top' ? top : top + (bottom - top - total)/2;
+  ctx.fillStyle = col; ctx.textBaseline = 'middle';
+  ctx.textAlign = s.align;
+  const x = s.align === 'left' ? pad : w/2;
+  lines.forEach((l, i) => {
+    ctx.font = `${l.bold ? 700 : 400} ${S}px ${FONTS[s.font]}`;
+    ctx.fillText(l.t, x, startY + i*lh + lh/2);
+  });
+
+  // signature
+  if (s.sigOn && s.sig.trim()) {
+    ctx.font = `500 40px ${FONTS[s.font]}`;
+    ctx.textBaseline = 'alphabetic'; ctx.textAlign = s.sigPos;
+    const sx = s.sigPos === 'left' ? pad : s.sigPos === 'right' ? w - pad : w/2;
+    ctx.fillText(s.sig.trim(), sx, h - pad);
   }
 }
 
-function seg(id, key, cb) {
-  $(id).addEventListener('click', e => {
-    const b = e.target.closest('button'); if (!b) return;
-    [...$(id).children].forEach(x => x.classList.toggle('on', x === b));
-    state[key] = b.dataset.v; cb && cb(); draw();
+/* ---------- UI wiring ---------- */
+function sync() {
+  document.querySelectorAll('[data-k]').forEach(el => {
+    if (el.type === 'checkbox') el.checked = !!s[el.dataset.k];
+    else if (el !== document.activeElement) el.value = s[el.dataset.k];
+  });
+  document.querySelectorAll('[data-seg]').forEach(g =>
+    [...g.children].forEach(b => b.classList.toggle('on', s[g.dataset.seg] === b.dataset.v)));
+  document.querySelectorAll('[data-show]').forEach(el => {
+    const [k, v] = el.dataset.show.split('=');
+    el.classList.toggle('hidden', v ? s[k] !== v : !s[k]);
+  });
+  document.querySelectorAll('.tpl').forEach(b => b.classList.toggle('on', b.dataset.tpl === s.tpl));
+  document.querySelectorAll('#colorSw .sw[data-c]').forEach(b => b.classList.toggle('on', s.c1 === b.dataset.c));
+  document.querySelectorAll('#gradSw .sw').forEach(b => b.classList.toggle('on', s.c1 === b.dataset.a && s.c2 === b.dataset.b));
+  document.querySelectorAll('#textSw .sw').forEach(b => b.classList.toggle('on', s.tc === b.dataset.c));
+  $('#decoClear').classList.toggle('hidden', !imgs.deco);
+}
+function update() { sync(); draw(); }
+
+document.querySelectorAll('[data-k]').forEach(el => {
+  const ev = (el.type === 'checkbox' || el.tagName === 'SELECT') ? 'change' : 'input';
+  el.addEventListener(ev, () => {
+    const k = el.dataset.k;
+    s[k] = el.type === 'checkbox' ? el.checked : el.type === 'range' ? +el.value : el.value;
+    update();
+  });
+});
+document.querySelectorAll('[data-seg]').forEach(g => g.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  s[g.dataset.seg] = b.dataset.v; update();
+}));
+document.querySelectorAll('.tpl').forEach(b => b.addEventListener('click', () => {
+  Object.assign(s, TEMPLATES[b.dataset.tpl], { tpl:b.dataset.tpl });
+  update();
+}));
+
+// swatches
+function swatch(parent, bg, title) {
+  const b = document.createElement('button');
+  b.className = 'sw'; b.title = title || ''; b.style.background = bg;
+  parent.appendChild(b); return b;
+}
+COLORS.forEach(c => {
+  const b = swatch($('#colorSw'), c, c); b.dataset.c = c;
+  b.addEventListener('click', () => { s.c1 = c; s.bg = 'plain'; update(); });
+});
+(() => { // custom color picker
+  const wrap = document.createElement('div'); wrap.className = 'sw pick'; wrap.title = 'Custom color';
+  const inp = document.createElement('input'); inp.type = 'color'; inp.value = '#fdf7ea';
+  inp.addEventListener('input', () => { s.c1 = inp.value; s.bg = 'plain'; update(); });
+  wrap.appendChild(inp); $('#colorSw').appendChild(wrap);
+})();
+GRADS.forEach(([a, b2]) => {
+  const b = swatch($('#gradSw'), `linear-gradient(135deg, ${a}, ${b2})`); b.dataset.a = a; b.dataset.b = b2;
+  b.addEventListener('click', () => { s.c1 = a; s.c2 = b2; s.bg = 'gradient'; update(); });
+});
+TEXT_COLORS.forEach(c => {
+  const b = swatch($('#textSw'), c === 'auto' ? 'linear-gradient(135deg,#fff 50%,#222 50%)' : c, c === 'auto' ? 'Auto' : c);
+  b.dataset.c = c;
+  b.addEventListener('click', () => { s.tc = c; update(); });
+});
+(() => {
+  const wrap = document.createElement('div'); wrap.className = 'sw pick'; wrap.title = 'Custom text color';
+  const inp = document.createElement('input'); inp.type = 'color'; inp.value = '#2b2118';
+  inp.addEventListener('input', () => { s.tc = inp.value; update(); });
+  wrap.appendChild(inp); $('#textSw').appendChild(wrap);
+})();
+
+// images
+function loadFile(inputSel, key, nameSel, afterBg) {
+  $(inputSel).addEventListener('change', e => {
+    const f = e.target.files[0]; if (!f) return;
+    const img = new Image();
+    img.onload = () => { imgs[key] = img; $(nameSel).textContent = f.name; update(); };
+    img.src = URL.createObjectURL(f);
   });
 }
-seg('bgType', 'bg', () => {
-  const g = state.bg === 'gradient';
-  $('c2wrap').classList.toggle('hidden', !g);
-  $('angleWrap').classList.toggle('hidden', !g);
-});
-seg('pos', 'pos');
+loadFile('#bgFile', 'bg', '#bgFileName');
+loadFile('#decoFile', 'deco', '#decoName');
+loadFile('#avFile', 'av', '#avName');
+$('#decoClear').addEventListener('click', () => { imgs.deco = null; $('#decoName').textContent = 'None'; $('#decoFile').value = ''; update(); });
 
-$('showHandle').addEventListener('change', () => {
-  $('handleOpts').classList.toggle('hidden', !$('showHandle').checked);
-});
-$('angle').addEventListener('input', () => $('angleVal').textContent = $('angle').value);
-$('size').addEventListener('input', () => $('sizeVal').textContent = $('size').value);
-document.querySelectorAll('input, textarea, select').forEach(el => el.addEventListener('input', draw));
-$('showHandle').addEventListener('change', draw);
-
-$('download').addEventListener('click', () => {
+$('#download').addEventListener('click', () => {
   const a = document.createElement('a');
-  a.download = 'instagram-post.png';
-  a.href = cv.toDataURL('image/png');
-  a.click();
+  a.download = 'post.png'; a.href = cv.toDataURL('image/png'); a.click();
 });
 
-draw();
+// boot
+Object.assign(s, TEMPLATES.quote);
+update();
+if (document.fonts) {
+  Promise.all(['400 40px "EB Garamond"','700 40px "EB Garamond"','400 40px Inter','700 40px Inter','400 40px "Playfair Display"','400 40px Caveat']
+    .map(f => document.fonts.load(f).catch(() => {}))).then(draw);
+}
 </script>
 </body>
 </html>
