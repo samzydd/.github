@@ -509,7 +509,7 @@ function sync() {
   document.querySelectorAll('#textSw .sw').forEach(b => b.classList.toggle('on', s.tc === b.dataset.c));
   $('#decoClear').classList.toggle('hidden', !imgs.deco);
 }
-function update() { sync(); draw(); }
+function update() { sync(); draw(); cacheBlob(); }
 
 document.querySelectorAll('[data-k]').forEach(el => {
   const ev = (el.type === 'checkbox' || el.tagName === 'SELECT') ? 'change' : 'input';
@@ -578,7 +578,16 @@ $('#decoClear').addEventListener('click', () => { imgs.deco = null; $('#decoName
 // ---------- saving ----------
 const FILE_NAME = 'ideatity-post.png';
 const isTouch = matchMedia('(pointer: coarse)').matches;
-let toastTimer;
+const isApple = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+let toastTimer, cachedBlob = null, blobTimer;
+
+// iOS only opens the share sheet if navigator.share() is called right inside the tap,
+// so keep an up-to-date PNG ready instead of creating it after the click.
+function cacheBlob() {
+  cachedBlob = null;
+  clearTimeout(blobTimer);
+  blobTimer = setTimeout(() => cv.toBlob(b => { cachedBlob = b; }, 'image/png'), 250);
+}
 
 function toast(msg, actionLabel, action) {
   document.querySelector('.toast')?.remove();
@@ -612,14 +621,14 @@ function showSaveSheet(url) {
   sheet.innerHTML = `
     <div class="glass card">
       <img alt="Your post">
-      <p>${isTouch ? 'Press and hold the image, then tap <b>Save to Photos</b> / <b>Download image</b>.'
+      <p>${isTouch ? (isApple ? 'Press and hold the image, then tap <b>Save to Photos</b>. It will appear in your camera roll.' : 'Press and hold the image, then tap <b>Download image</b>.')
                    : 'Right-click the image and choose <b>Save Image As…</b>, or use the button below.'}</p>
       <div class="actions">
         <button class="btn ghost" data-close>Close</button>
         <button class="btn" data-dl>Download</button>
       </div>
     </div>`;
-  sheet.querySelector('img').src = url;
+  sheet.querySelector('img').src = cv.toDataURL('image/png');
   const close = () => { sheet.remove(); URL.revokeObjectURL(url); };
   sheet.addEventListener('click', e => { if (e.target === sheet || e.target.closest('[data-close]')) close(); });
   sheet.querySelector('[data-dl]').onclick = () => triggerDownload(url);
@@ -627,22 +636,25 @@ function showSaveSheet(url) {
 }
 
 async function saveImage() {
+  // Phones: native share sheet -> "Save Image" puts it in Photos / camera roll.
+  if (isTouch && navigator.canShare && cachedBlob) {
+    const file = new File([cachedBlob], FILE_NAME, { type:'image/png' });
+    if (navigator.canShare({ files:[file] })) {
+      try { await navigator.share({ files:[file] }); return; }
+      catch (e) { if (e.name === 'AbortError') return; /* blocked: fall back below */ }
+    }
+  }
+
   let blob;
   try {
-    blob = await new Promise((res, rej) => cv.toBlob(b => b ? res(b) : rej(new Error('empty')), 'image/png'));
+    blob = cachedBlob || await new Promise((res, rej) => cv.toBlob(b => b ? res(b) : rej(new Error('empty')), 'image/png'));
   } catch (e) {
     toast("Couldn't create the image. Try a different photo.");
     return;
   }
-
-  // Phones: the native share sheet offers "Save Image" straight to Photos.
-  const file = new File([blob], FILE_NAME, { type:'image/png' });
-  if (isTouch && navigator.canShare && navigator.canShare({ files:[file] })) {
-    try { await navigator.share({ files:[file], title:'Ideatity post' }); return; }
-    catch (e) { if (e.name === 'AbortError') return; /* otherwise fall through */ }
-  }
-
   const url = URL.createObjectURL(blob);
+
+  // In-app browsers (Instagram, Facebook…) block share & downloads: press-and-hold still works.
   if (isTouch) { showSaveSheet(url); return; }
 
   triggerDownload(url);
@@ -650,13 +662,15 @@ async function saveImage() {
 }
 
 $('#download').addEventListener('click', saveImage);
+if (isApple && isTouch) $('#download').textContent = 'Save to Photos';
+else if (isTouch) $('#download').textContent = 'Save image';
 
 // boot
 Object.assign(s, TEMPLATES.quote);
 update();
 if (document.fonts) {
   Promise.all(['400 40px "EB Garamond"','700 40px "EB Garamond"','400 40px Inter','700 40px Inter','400 40px "Playfair Display"','400 40px Caveat']
-    .map(f => document.fonts.load(f).catch(() => {}))).then(draw);
+    .map(f => document.fonts.load(f).catch(() => {}))).then(() => { draw(); cacheBlob(); });
 }
 </script>
 </body>
