@@ -126,6 +126,16 @@
   .file input[type=file] { display:none; }
   .file small { color:var(--ink2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .link { background:none; border:0; color:var(--accent); font:inherit; font-size:.85rem; font-weight:600; cursor:pointer; padding:0; }
+
+  /* save sheet + toast */
+  .sheet { position:fixed; inset:0; z-index:50; display:flex; align-items:center; justify-content:center; padding:16px; background:rgba(0,0,0,.35); }
+  .sheet .card { width:100%; max-width:420px; max-height:92vh; overflow:auto; border-radius:30px; padding:18px; display:flex; flex-direction:column; gap:14px; align-items:center; text-align:center; }
+  .sheet img { width:100%; border-radius:16px; box-shadow:0 2px 16px rgba(0,0,0,.2); -webkit-touch-callout:default; user-select:auto; }
+  .sheet p { margin:0; color:var(--ink2); font-size:.92rem; line-height:1.4; }
+  .sheet .actions { display:flex; gap:10px; width:100%; }
+  .sheet .actions > * { flex:1; }
+  .btn.ghost { background:var(--glass-strong); color:var(--ink); box-shadow:inset 0 1px 0 var(--edge); }
+  .toast { position:fixed; left:50%; bottom:24px; transform:translateX(-50%); z-index:40; border-radius:999px; padding:10px 12px 10px 18px; display:flex; gap:12px; align-items:center; font-weight:500; font-size:.92rem; white-space:nowrap; }
 </style>
 </head>
 <body>
@@ -565,10 +575,81 @@ loadFile('#avFile', 'av', '#avName');
 loadFile('#avFile2', 'av', '#avName2');
 $('#decoClear').addEventListener('click', () => { imgs.deco = null; $('#decoName').textContent = 'None'; $('#decoFile').value = ''; update(); });
 
-$('#download').addEventListener('click', () => {
+// ---------- saving ----------
+const FILE_NAME = 'ideatity-post.png';
+const isTouch = matchMedia('(pointer: coarse)').matches;
+let toastTimer;
+
+function toast(msg, actionLabel, action) {
+  document.querySelector('.toast')?.remove();
+  const el = document.createElement('div');
+  el.className = 'glass toast';
+  el.innerHTML = `<span></span>`;
+  el.firstChild.textContent = msg;
+  if (actionLabel) {
+    const b = document.createElement('button');
+    b.className = 'link'; b.textContent = actionLabel;
+    b.onclick = () => { el.remove(); action(); };
+    el.appendChild(b);
+  }
+  document.body.appendChild(el);
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.remove(), 6000);
+}
+
+function triggerDownload(url) {
   const a = document.createElement('a');
-  a.download = 'ideatity-post.png'; a.href = cv.toDataURL('image/png'); a.click();
-});
+  a.href = url; a.download = FILE_NAME; a.rel = 'noopener';
+  document.body.appendChild(a); // Firefox ignores clicks on detached links
+  a.click();
+  a.remove();
+}
+
+// Fallback that always works: show the image so it can be long-pressed / right-clicked.
+function showSaveSheet(url) {
+  const sheet = document.createElement('div');
+  sheet.className = 'sheet';
+  sheet.innerHTML = `
+    <div class="glass card">
+      <img alt="Your post">
+      <p>${isTouch ? 'Press and hold the image, then tap <b>Save to Photos</b> / <b>Download image</b>.'
+                   : 'Right-click the image and choose <b>Save Image As…</b>, or use the button below.'}</p>
+      <div class="actions">
+        <button class="btn ghost" data-close>Close</button>
+        <button class="btn" data-dl>Download</button>
+      </div>
+    </div>`;
+  sheet.querySelector('img').src = url;
+  const close = () => { sheet.remove(); URL.revokeObjectURL(url); };
+  sheet.addEventListener('click', e => { if (e.target === sheet || e.target.closest('[data-close]')) close(); });
+  sheet.querySelector('[data-dl]').onclick = () => triggerDownload(url);
+  document.body.appendChild(sheet);
+}
+
+async function saveImage() {
+  let blob;
+  try {
+    blob = await new Promise((res, rej) => cv.toBlob(b => b ? res(b) : rej(new Error('empty')), 'image/png'));
+  } catch (e) {
+    toast("Couldn't create the image. Try a different photo.");
+    return;
+  }
+
+  // Phones: the native share sheet offers "Save Image" straight to Photos.
+  const file = new File([blob], FILE_NAME, { type:'image/png' });
+  if (isTouch && navigator.canShare && navigator.canShare({ files:[file] })) {
+    try { await navigator.share({ files:[file], title:'Ideatity post' }); return; }
+    catch (e) { if (e.name === 'AbortError') return; /* otherwise fall through */ }
+  }
+
+  const url = URL.createObjectURL(blob);
+  if (isTouch) { showSaveSheet(url); return; }
+
+  triggerDownload(url);
+  toast('Image saved to your Downloads.', "Didn't download?", () => showSaveSheet(url));
+}
+
+$('#download').addEventListener('click', saveImage);
 
 // boot
 Object.assign(s, TEMPLATES.quote);
