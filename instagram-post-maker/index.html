@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Post Studio</title>
+<title>Ideatity</title>
+<link rel="icon" type="image/svg+xml" href="logo.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=EB+Garamond:wght@400;700&family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@400;700&display=swap">
 <style>
@@ -53,6 +54,8 @@
   }
 
   header.top { max-width:1120px; margin:0 auto; padding:22px 20px 0; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .brand { display:flex; align-items:center; gap:14px; }
+  .logo { width:52px; height:52px; filter:drop-shadow(0 4px 10px rgba(91,63,168,.3)); }
   header.top h1 { margin:0; font-size:1.35rem; font-weight:700; letter-spacing:-.02em; }
   header.top p { margin:2px 0 0; color:var(--ink2); font-size:.9rem; }
 
@@ -129,9 +132,12 @@
 <div class="backdrop"><div class="blob a"></div><div class="blob b"></div><div class="blob c"></div><div class="blob d"></div></div>
 
 <header class="top">
-  <div>
-    <h1>Post Studio</h1>
-    <p>Write it. Style it. Download it for Instagram.</p>
+  <div class="brand">
+    <img src="logo.svg" alt="" class="logo">
+    <div>
+      <h1>Ideatity</h1>
+      <p>Write it. Style it. Download it for Instagram.</p>
+    </div>
   </div>
 </header>
 
@@ -487,7 +493,7 @@ $('#decoClear').addEventListener('click', () => { imgs.deco = null; $('#decoName
 
 $('#download').addEventListener('click', () => {
   const a = document.createElement('a');
-  a.download = 'post.png'; a.href = cv.toDataURL('image/png'); a.click();
+  a.download = 'ideatity-post.png'; a.href = cv.toDataURL('image/png'); a.click();
 });
 
 // boot
